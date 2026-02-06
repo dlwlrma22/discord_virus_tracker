@@ -5,7 +5,6 @@ import requests
 from datetime import datetime, timezone
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 GUILD_ID = int(os.getenv("GUILD_ID"))
 
 HARD_DURATION = 870         # 14 min 30 sec
@@ -62,3 +61,4 @@ async def on_ready():
     print(f"Logged in as {client.user}")
 
 client.run(TOKEN)
+
