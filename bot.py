@@ -91,18 +91,19 @@ async def nm(interaction: discord.Interaction):
 
 
 #-----FOR CLEARING OLD COMMANDS ON STARTUP-----
-@client.event
-async def on_ready():
-    print("🧹 Clearing old slash commands...")
-    tree.clear_commands(guild=None)   # clears ALL global slash commands
-    await tree.sync()
-    print(f"✅ Synced fresh commands as {client.user}")
-
-#-----ORIGINAL--------
 #@client.event
 #async def on_ready():
+#    print("🧹 Clearing old slash commands...")
+#    tree.clear_commands(guild=None)   # clears ALL global slash commands
 #    await tree.sync()
-#    print(f"✅ Logged in as {client.user}")
+#    print(f"✅ Synced fresh commands as {client.user}")
+
+#-----ORIGINAL--------
+@client.event
+async def on_ready():
+    await tree.sync()
+    print(f"✅ Logged in as {client.user}")
 
 client.run(TOKEN)
+
 
