@@ -3,74 +3,92 @@ import sys
 import discord
 from discord import app_commands
 import requests
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
-# Environmental variable for Discord token
 TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
     print("❌ DISCORD_TOKEN not set")
     sys.exit(1)
 
-# Constants for time calculations
-HARD_DURATION = 870         # 14m 30s
-NIGHTMARE_DURATION = 14400 # 4 hours
 VIRUS_API = "https://clashofcoinscalc.com/api/timers/global-spawn-timers"
 
-# Discord setup
+HARD_DURATION = 870         # 14 min 30 sec
+NIGHTMARE_DURATION = 14400 # 4 hours
+
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-# Helpers
-def format_time(seconds):
+# Helper: format remaining time
+def format_remaining(seconds: int) -> str:
     seconds = max(0, seconds)
-    h = seconds // 3600
-    m = (seconds % 3600) // 60
-    s = seconds % 60
-    return f"{h:02d}:{m:02d}:{s:02d}"
+    hrs = seconds // 3600
+    mins = (seconds % 3600) // 60
+    secs = seconds % 60
+    return f"{hrs:02d}:{mins:02d}:{secs:02d}"
 
-def remaining_time(last_spawn, duration):
-    last = datetime.fromisoformat(last_spawn.replace("Z", "+00:00")).timestamp()
-    now = datetime.now(timezone.utc).timestamp()
-    return int(last + duration - now)
-
-# /hard for Hard Virus timer
-@tree.command(name="hard", description="Shows time until next Hard Virus spawn")
+# /hard command
+@tree.command(name="hard", description="Shows Hard Virus spawn time (UTC & PHT)")
 async def hard(interaction: discord.Interaction):
     try:
         data = requests.get(VIRUS_API, timeout=10).json()
-        last = data.get("last_hard_spawn")
+        last_spawn = data.get("last_hard_spawn")
 
-        if not last:
-            await interaction.response.send_message("No Hard Virus data yet.")
+        if not last_spawn:
+            await interaction.response.send_message("No data for Hard Virus yet.")
             return
 
-        remaining = remaining_time(last, HARD_DURATION)
-        await interaction.response.send_message(
-            f"🦠 **Hard Virus spawns in:** `{format_time(remaining)}`"
-        )
-    except Exception as e:
-        await interaction.response.send_message(f"❌ Error: {e}")
+        last_time = datetime.fromisoformat(last_spawn.replace("Z", "+00:00"))
+        spawn_utc = last_time + timedelta(seconds=HARD_DURATION)
+        now_utc = datetime.now(timezone.utc)
 
-# /nm for Nightmare Virus timer
-@tree.command(name="nm", description="Shows time until next Nightmare Virus spawn")
+        remaining = int((spawn_utc - now_utc).total_seconds())
+
+        pht = timezone(timedelta(hours=8))
+        spawn_pht = spawn_utc.astimezone(pht)
+
+        await interaction.response.send_message(
+            f"🦠 **Hard Virus**\n"
+            f"⏳ Spawns in: `{format_remaining(remaining)}`\n"
+            f"⏰ Estimated time:\n"
+            f"• **UTC:** `{spawn_utc.strftime('%I:%M %p')}`\n"
+            f"• **PHT:** `{spawn_pht.strftime('%I:%M %p')}`"
+        )
+
+    except Exception as e:
+        await interaction.response.send_message(f"Error: {e}")
+
+# /nm command
+@tree.command(name="nm", description="Shows Nightmare Virus spawn time (UTC & PHT)")
 async def nm(interaction: discord.Interaction):
     try:
         data = requests.get(VIRUS_API, timeout=10).json()
-        last = data.get("last_nightmare_spawn")
+        last_spawn = data.get("last_nightmare_spawn")
 
-        if not last:
-            await interaction.response.send_message("No Nightmare Virus data yet.")
+        if not last_spawn:
+            await interaction.response.send_message("No data for Nightmare Virus yet.")
             return
 
-        remaining = remaining_time(last, NIGHTMARE_DURATION)
-        await interaction.response.send_message(
-            f"🦠 **Nightmare Virus spawns in:** `{format_time(remaining)}`"
-        )
-    except Exception as e:
-        await interaction.response.send_message(f"❌ Error: {e}")
+        last_time = datetime.fromisoformat(last_spawn.replace("Z", "+00:00"))
+        spawn_utc = last_time + timedelta(seconds=NIGHTMARE_DURATION)
+        now_utc = datetime.now(timezone.utc)
 
-# Ready event to sync commands and confirm bot is online
+        remaining = int((spawn_utc - now_utc).total_seconds())
+
+        pht = timezone(timedelta(hours=8))
+        spawn_pht = spawn_utc.astimezone(pht)
+
+        await interaction.response.send_message(
+            f"🦠 **Nightmare Virus**\n"
+            f"⏳ Spawns in: `{format_remaining(remaining)}`\n"
+            f"⏰ Estimated time:\n"
+            f"• **UTC:** `{spawn_utc.strftime('%I:%M %p')}`\n"
+            f"• **PHT:** `{spawn_pht.strftime('%I:%M %p')}`"
+        )
+
+    except Exception as e:
+        await interaction.response.send_message(f"Error: {e}")
+
 @client.event
 async def on_ready():
     await tree.sync()
