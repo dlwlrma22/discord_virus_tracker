@@ -98,13 +98,14 @@ async def nm(interaction: discord.Interaction):
 #    await tree.sync()
 #    print(f"✅ Synced fresh commands as {client.user}")
 
------ORIGINAL--------
+#-----ORIGINAL--------
 @client.event
 async def on_ready():
     await tree.sync()
     print(f"✅ Logged in as {client.user}")
 
 client.run(TOKEN)
+
 
 
 
