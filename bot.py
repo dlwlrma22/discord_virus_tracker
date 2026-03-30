@@ -33,7 +33,7 @@ def format_remaining(seconds: int) -> str:
     return f"{hrs:02d}:{mins:02d}:{secs:02d}"
 
 #Get token price from Dexscreener
-def get_token_price():
+def get_token_data():
     try:
         response = requests.get(DEX_PRICE_API, timeout=10)
         response.raise_for_status()
@@ -43,25 +43,50 @@ def get_token_price():
         if not pairs:
             return None
 
-        price = pairs[0].get("priceUsd")
-        if not price:
-            return None
+        pair = pairs[0]
+        price = pair.get("priceUsd")
+        price_change = pair.get("priceChange", {})
 
-        return float(price)
+        return {
+            "price": float(price) if price else None,
+            "m5": price_change.get("m5"),
+            "h1": price_change.get("h1"),
+            "h6": price_change.get("h6"),
+            "h24": price_change.get("h24"),
+        }
 
     except Exception as e:
         print(f"Price fetch error: {e}")
         return None
 
-@tasks.loop(seconds=60)
+status_index = 0
+
+@tasks.loop(seconds=20)
 async def update_status():
-    price = get_token_price()
+    global status_index
+    token_data = get_token_data()
 
-    if price is None:
-        activity = discord.Game(name=f"{TOKEN_SYMBOL} price unavailable")
+    if not token_data or token_data["price"] is None:
+        text = "OWB price unavailable"
     else:
-        activity = discord.Game(name=f"{TOKEN_SYMBOL}: ${price:.6f}")
+        price = token_data["price"]
+        changes = [
+            ("5m", token_data["m5"]),
+            ("1h", token_data["h1"]),
+            ("6h", token_data["h6"]),
+            ("24h", token_data["h24"]),
+        ]
 
+        label, value = changes[status_index % len(changes)]
+        status_index += 1
+
+        if value is None:
+            text = f"OWB ${price:.5f} | {label}: N/A"
+        else:
+            arrow = "▲" if value > 0 else "▼" if value < 0 else "•"
+            text = f"OWB ${price:.5f} | {label} {arrow} {value:+.2f}%"
+
+    activity = discord.Game(name=text)
     await client.change_presence(status=discord.Status.online, activity=activity)
 
 # /hard command
