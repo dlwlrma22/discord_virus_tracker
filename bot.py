@@ -60,7 +60,7 @@ async def update_status():
     if price is None:
         activity = discord.Game(name=f"{TOKEN_SYMBOL} price unavailable")
     else:
-        activity = discord.Game(name=f"{TOKEN_SYMBOL}: ${price:.4f}")
+        activity = discord.Game(name=f"{TOKEN_SYMBOL}: ${price:.6f}")
 
     await client.change_presence(status=discord.Status.online, activity=activity)
 
